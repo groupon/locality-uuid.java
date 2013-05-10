@@ -2,7 +2,7 @@ Locality UUID (vB) Java
 =======================
 
 This is a UUID class intended to help control data locality when inserting into a distributed data 
-system, such as MongoDB or HBase. There is also [a Java implementation](groupon/locality-uuid.java).
+system, such as MongoDB or HBase. There is also [a Ruby implementation](http://github.com/groupon/locality-uuid.java).
 This version does not conform to any external standard or spec. Developed at Groupon in Palo Alto
 by Peter Bakkum and Michael Craig.
 
