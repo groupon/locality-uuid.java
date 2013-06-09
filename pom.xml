@@ -7,7 +7,7 @@
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>Groupon UUID</name>
+    <name>Locality UUID</name>
     <description>UUID implementation for locality in distributed systems</description>
     <url>http://github.com/groupon/locality-uuid.java</url>
 
