@@ -20,7 +20,9 @@
     </licenses>
 
     <scm>
-        <url>http://github.com/groupon/locality-uuid.java</url>
+        <connection>scm:git:git@github.com:groupon/locality-uuid.java.git</connection>
+        <developerConnection>scm:git:git@github.com:groupon/locality-uuid.java.git</developerConnection>
+        <url>git@github.com:groupon/locality-uuid.java.git</url>
     </scm>
 
     <properties>
