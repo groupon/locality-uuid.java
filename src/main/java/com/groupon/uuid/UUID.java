@@ -39,6 +39,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.Random;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -352,7 +353,13 @@ public final class UUID {
 
     private static byte[] macAddress() {
         try {
-            byte[] mac = NetworkInterface.getNetworkInterfaces().nextElement().getHardwareAddress();
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            byte[] mac = null;
+            while (interfaces.hasMoreElements() && mac != null && mac.length != 6) {
+                NetworkInterface netInterface = interfaces.nextElement();
+                if (netInterface.isLoopback() || netInterface.isVirtual() ) { continue; }
+                mac = netInterface.getHardwareAddress();
+            }
 
             // if the machine is not connected to a network it has no active MAC address
             if (mac == null)

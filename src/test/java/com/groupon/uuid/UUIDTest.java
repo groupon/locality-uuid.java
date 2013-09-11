@@ -37,6 +37,7 @@ import org.junit.Test;
 import java.net.NetworkInterface;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -166,11 +167,31 @@ public class UUIDTest {
         assertTrue(id.getTimestamp().getTime() < new Date().getTime() + 100);
     }
 
+    private static byte[] macAddress() {
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            byte[] mac = null;
+            while (interfaces.hasMoreElements() && mac != null && mac.length != 6) {
+                NetworkInterface netInterface = interfaces.nextElement();
+                if (netInterface.isLoopback() || netInterface.isVirtual() ) { continue; }
+                mac = netInterface.getHardwareAddress();
+            }
+
+            // if the machine is not connected to a network it has no active MAC address
+            if (mac == null)
+                mac = new byte[] {0, 0, 0, 0, 0, 0};
+
+            return mac;
+        } catch (Exception e) {
+            throw new RuntimeException("Could not get MAC address");
+        }
+    }
+
     @Test
     public void testMacAddressField() throws Exception{
         UUID id = new UUID();
 
-        byte[] mac = NetworkInterface.getNetworkInterfaces().nextElement().getHardwareAddress();
+        byte[] mac = macAddress();
 
         // if the machine is not connected to a network it has no active MAC address
         if (mac == null)
