@@ -34,9 +34,12 @@ package com.groupon.uuid;
 
 import org.junit.Test;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.NetworkInterface;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -166,11 +169,24 @@ public class UUIDTest {
         assertTrue(id.getTimestamp().getTime() < new Date().getTime() + 100);
     }
 
+    /**
+     * Exposes the mac address that us used in the UUID via injection.
+     * @return the mac address
+     * @throws NoSuchMethodException
+     * @throws InvocationTargetException
+     * @throws IllegalAccessException
+     */
+    private static byte[] macAddress() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        Method macAddress = com.groupon.uuid.UUID.class.getDeclaredMethod("macAddress");
+        macAddress.setAccessible(true);
+        return (byte[])macAddress.invoke(new UUID());
+    }
+
     @Test
     public void testMacAddressField() throws Exception{
         UUID id = new UUID();
 
-        byte[] mac = NetworkInterface.getNetworkInterfaces().nextElement().getHardwareAddress();
+        byte[] mac = macAddress();
 
         // if the machine is not connected to a network it has no active MAC address
         if (mac == null)
