@@ -45,9 +45,21 @@ import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * See README.md for more information
+ * See README.md for more information. This is a UUID implementation that uses vB (custom) UUIDs by default, but can
+ * parse and hold validly formatted UUIDs of any type. The content is stored as a byte array, and some effort has been
+ * put into making this look at least a little bit like the java.util.UUID implementation. Probably the most common
+ * uses of this class will be
+ *
+ * UUID id = new UUID();
+ * to generate a new vB UUID
+ *
+ * UUID id = new UUID(uuidString);
+ * to parse a 36-character string representation of a UUID
+ *
+ * String s = id.toString();
+ * to serialize the UUID to a String
  */
-public final class UUID {
+public class UUID {
     public static final int PID                 = processId();
     public static final byte[] MAC              = macAddress();
 
@@ -60,10 +72,10 @@ public final class UUID {
             {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
     private static boolean sequential           = false;
-    private final byte[] content;
+    protected final byte[] content;
 
     /**
-     * Constructor that generates a new UUID using the current process id, MAC address, and timestamp
+     * Constructor that generates a new vB UUID using the current process id, MAC address, and timestamp.
      */
     public UUID() {
         long time = new Date().getTime();
@@ -112,25 +124,37 @@ public final class UUID {
     }
 
     /**
-     * Constructor that takes a byte array as this UUID's content
-     * @param bytes UUID content
+     * Constructor that takes a byte array as this UUID's content. This is equivalent to the binary representation
+     * of the UUID. Note that the byte array is copied, so if the argument value changes then the constructed UUID
+     * will not. This throws an IllegalArgumentException if the byte array is null or not 16 bytes long.
+     * @param bytes UUID content as bytes.
      */
     public UUID(byte[] bytes) {
+        if (bytes == null)
+            throw new IllegalArgumentException("Tried to construct UUID with null byte array");
+
         if (bytes.length != 16)
-            throw new RuntimeException("Attempted to parse malformed UUID: " + Arrays.toString(bytes));
+            throw new IllegalArgumentException("Attempted to parse malformed UUID: " + Arrays.toString(bytes));
 
         content = Arrays.copyOf(bytes, 16);
     }
 
+    /**
+     * Constructor that takes a UUID string representation and parses it. This constructor expects the canonical UUID
+     * String format validated by the isValidUUID() method and thros an IllegalArgumentException otherwise.
+     * @param id UUID String representation, expected to be the valid UUID format.
+     */
     public UUID(String id) {
+        if (id == null)
+            throw new IllegalArgumentException("Tried to construct UUID from null String");
+
         id = id.trim();
-
-        if (id.length() != 36)
-            throw new RuntimeException("Attempted to parse malformed UUID: " + id);
-
-        content = new byte[16];
         char[] chars = id.toCharArray();
 
+        if (!isValidUUID(chars))
+            throw new IllegalArgumentException("Attempted to parse malformed UUID: " + id);
+
+        content = new byte[16];
         content[0]  = mapToByte(chars[0],  chars[1]);
         content[1]  = mapToByte(chars[2],  chars[3]);
         content[2]  = mapToByte(chars[4],  chars[5]);
@@ -150,7 +174,135 @@ public final class UUID {
     }
 
     /**
-     * Toggle uuid generator into sequential mode, so the random segment is in order and increases by one
+     * Constructs a Locality UUID from a standard Java java.util.UUID object. A java.util.UUID object won't return
+     * its content as a byte array, but will return the first and second halves of content as longs. We use these
+     * to construct a new Locality UUID object. This throws an IllegalArgumentException if the uuid argument is null.
+     * @param uuid A non-null java.util.UUID object, from which we will construct a locality UUID with identical content.
+     */
+    public UUID(java.util.UUID uuid) {
+        if (uuid == null)
+            throw new IllegalArgumentException("Tried to construct Locality UUID with null java.util.UUID");
+
+        content = new byte[16];
+        constructFromLongs(uuid.getMostSignificantBits(), uuid.getLeastSignificantBits());
+    }
+
+    /**
+     * Constructs a UUID using long values representing the first and second half of the UUID content. This was added
+     * to be consistent with the java.util.UUID constructor.
+     * @param mostSigBits Long value representing the first half of the UUID.
+     * @param leastSigBits Long value representing the second half of the UUID.
+     */
+    public UUID(long mostSigBits, long leastSigBits) {
+        content = new byte[16];
+        constructFromLongs(mostSigBits, leastSigBits);
+    }
+
+    /**
+     * This method sets the content based on the values of two longs representing the first and second half of the UUID.
+     * This method is called from the UUID(java.util.UUID) and UUID(long, long) constructors.
+     * @param hi Long value representing the first half of the UUID.
+     * @param lo Long value representing the second half of the UUID.
+     */
+    private void constructFromLongs(long hi, long lo) {
+        content[ 0] = (byte) (hi >> 56);
+        content[ 1] = (byte) (hi >> 48);
+        content[ 2] = (byte) (hi >> 40);
+        content[ 3] = (byte) (hi >> 32);
+        content[ 4] = (byte) (hi >> 24);
+        content[ 5] = (byte) (hi >> 16);
+        content[ 6] = (byte) (hi >>  8);
+        content[ 7] = (byte) (hi      );
+        content[ 8] = (byte) (lo >> 56);
+        content[ 9] = (byte) (lo >> 48);
+        content[10] = (byte) (lo >> 40);
+        content[11] = (byte) (lo >> 32);
+        content[12] = (byte) (lo >> 24);
+        content[13] = (byte) (lo >> 16);
+        content[14] = (byte) (lo >>  8);
+        content[15] = (byte) (lo      );
+    }
+
+    /**
+     * This method validates a UUID String by making sure its non-null and calling isValidUUID(char[]).
+     * @param id UUID String.
+     * @return True or false based on whether the String can be used to construct a UUID.
+     */
+    public static boolean isValidUUID(String id) {
+        return id != null && isValidUUID(id.toCharArray());
+    }
+
+    /**
+     * This method validates a character array as the expected format for a printed representation of a UUID. The
+     * expected format is 36 characters long, with '-' at the 8th, 13th, 18th, and 23rd characters. The remaining
+     * characters are expected to be valid hex, meaning in the range ('0' - '9', 'a' - 'f', 'A' - 'F') inclusive.
+     * If a character array is valid, then it can be used to construct a UUID. This method has been written unrolled
+     * and verbosely, with the theory that this is simpler and faster than using loops or a regex.
+     * @param ch A character array of a UUID's printed representation.
+     * @return True or false based on whether the UUID is valid, no exceptions are thrown.
+     */
+    public static boolean isValidUUID(char[] ch) {
+        return  ch != null       &&
+                ch.length == 36  &&
+                validHex(ch[0 ]) &&
+                validHex(ch[1 ]) &&
+                validHex(ch[2 ]) &&
+                validHex(ch[3 ]) &&
+                validHex(ch[4 ]) &&
+                validHex(ch[5 ]) &&
+                validHex(ch[6 ]) &&
+                validHex(ch[7 ]) &&
+                ch[8] == '-'     &&
+                validHex(ch[9 ]) &&
+                validHex(ch[10]) &&
+                validHex(ch[11]) &&
+                validHex(ch[12]) &&
+                ch[13] == '-'    &&
+                validHex(ch[14]) &&
+                validHex(ch[15]) &&
+                validHex(ch[16]) &&
+                validHex(ch[17]) &&
+                ch[18] == '-'    &&
+                validHex(ch[19]) &&
+                validHex(ch[20]) &&
+                validHex(ch[21]) &&
+                validHex(ch[22]) &&
+                ch[23] == '-'    &&
+                validHex(ch[24]) &&
+                validHex(ch[25]) &&
+                validHex(ch[26]) &&
+                validHex(ch[27]) &&
+                validHex(ch[28]) &&
+                validHex(ch[29]) &&
+                validHex(ch[30]) &&
+                validHex(ch[31]) &&
+                validHex(ch[32]) &&
+                validHex(ch[33]) &&
+                validHex(ch[34]) &&
+                validHex(ch[35]);
+    }
+
+    /**
+     * Just a simple method to determine if a character is valid hex in the range ('0' - '9', 'a' - 'f', 'A' - 'F').
+     * @param c A character to test.
+     * @return True or false based on whether or not the character is in the expected range.
+     */
+    private static boolean validHex(char c) {
+        return  (c >= '0' && c <= '9') ||
+                (c >= 'a' && c <= 'f') ||
+                (c >= 'A' && c <= 'F');
+    }
+
+    /**
+     * Toggle UUID generator into sequential mode, so the random segment is in order and increases by one. In
+     * sequential mode, there is presumably a desire that UUIDs generated around the same time should begin with similar
+     * characters, but this is difficult in a distributed environment. The solution is to set the counter value based
+     * on a hash of the UTC date and time up to a 10 minute precision. This means that UUID classes initialized at
+     * similar times should start with similar counter values, but this is not guaranteed. If one of these classes
+     * is generating vastly more UUIDs than others, then these counters can become skewed.
+     *
+     * Calling this method more than once without toggling back to variable mode has no effect, so it probably makes
+     * more sense to call this from a static context, like your main method or in a class' static initialization.
      */
     public static void useSequentialIds() {
         if (!sequential) {
@@ -176,7 +328,6 @@ public final class UUID {
             x |= ((int)digest[1] & 0xFF) << 8;
             x |= ((int)digest[2] & 0xFF) << 16;
             x |= ((int)digest[3] & 0xFF) << 24;
-
             COUNTER.set(x);
         }
         sequential = true;
@@ -191,9 +342,9 @@ public final class UUID {
     }
 
     /**
-     * map hex character to 4 bit number
-     * @param x hex character
-     * @return four bit number representing offset from '0'
+     * This method maps a hex character to its 4-bit representation in an int.
+     * @param x Hex character in the range ('0' - '9', 'a' - 'f', 'A' - 'F').
+     * @return 4-bit number in int representing hex offset from 0.
      */
     private static int intValue(char x) {
         if (x >= '0' && x <= '9')
@@ -206,10 +357,10 @@ public final class UUID {
     }
 
     /**
-     * map two hex characters to 4 bit numbers and combine them
-     * @param a hex character 1
-     * @param b hex character 2
-     * @return single byte value of combined characters
+     * Map two hex characters to 4-bit numbers and combine them to produce 8-bit number in byte.
+     * @param a First hex character.
+     * @param b Second hex character.
+     * @return Byte representation of given hex characters.
      */
     private static byte mapToByte(char a, char b) {
         int ai = intValue(a);
@@ -218,13 +369,18 @@ public final class UUID {
     }
 
     /**
-     * copy the content of this UUID, so that it can't be changed, and return it
-     * @return raw byte array of UUID
+     * Get contents of this UUID as a byte array. The array is copied before returning so that it can't be changed.
+     * @return Raw byte array of UUID contents.
      */
     public byte[] getBytes() {
         return Arrays.copyOf(content, 16);
     }
 
+    /**
+     * Get this UUID object as a String. It will be returned as a canonical 36-character UUID string with lower-case
+     * hex characters.
+     * @return UUID as String.
+     */
     @Override
     public String toString() {
         char[] id = new char[36];
@@ -271,16 +427,61 @@ public final class UUID {
     }
 
     /**
-     * extract version field as a hex char from raw UUID bytes
-     * @return version char
+     * Get the most significant bits (the first half) of the UUID content as a 64-bit long.
+     * @return The first half of the UUID as a long.
+     */
+    public long getMostSignificantBits() {
+        long a;
+        a  = ((long)content[ 0] & 0xFF) << 56;
+        a |= ((long)content[ 1] & 0xFF) << 48;
+        a |= ((long)content[ 2] & 0xFF) << 40;
+        a |= ((long)content[ 3] & 0xFF) << 32;
+        a |= ((long)content[ 4] & 0xFF) << 24;
+        a |= ((long)content[ 5] & 0xFF) << 16;
+        a |= ((long)content[ 6] & 0xFF) << 8;
+        a |= ((long)content[ 7] & 0xFF);
+        return a;
+    }
+
+    /**
+     * Get the least significant bits (the second half) of the UUID content as a 64-bit long.
+     * @return The second half of the UUID as a long.
+     */
+    public long getLeastSignificantBits() {
+        long b;
+        b  = ((long)content[ 8] & 0xFF) << 56;
+        b |= ((long)content[ 9] & 0xFF) << 48;
+        b |= ((long)content[10] & 0xFF) << 40;
+        b |= ((long)content[11] & 0xFF) << 32;
+        b |= ((long)content[12] & 0xFF) << 24;
+        b |= ((long)content[13] & 0xFF) << 16;
+        b |= ((long)content[14] & 0xFF) << 8;
+        b |= ((long)content[15] & 0xFF);
+        return b;
+    }
+
+    /**
+     * Get the java.util.UUID representation of this UUID object. The java.util.UUID is constructed using the most and
+     * least significant bits of this UUID's content. No memory is shared with the new java.util.UUID.
+     * @return This com.groupon.uuid.UUID's representation as a java.util.UUID.
+     */
+    public java.util.UUID toJavaUUID() {
+        return new java.util.UUID(getMostSignificantBits(), getLeastSignificantBits());
+    }
+
+    /**
+     * Extract version field as a hex char from raw UUID bytes. By default, generated UUIDs will have 'b' as the
+     * version, but it is possible to parse UUIDs of different types, '4' for example.
+     * @return UUID version as a char.
      */
     public char getVersion() {
         return HEX[(content[6] & 0xF0) >> 4];
     }
 
     /**
-     * extract process id from raw UUID bytes and return as int
-     * @return id of process that generated the UUID, or -1 for unrecognized format
+     * Extract process id from raw UUID bytes and return as int. This only applies for this type of UUID, for other
+     * UUID types, such as the randomly generated v4, its not possible to discover process id, so -1 is returned.
+     * @return Id of process that generated the UUID, or -1 for unrecognized format.
      */
     public int getProcessId() {
         if (getVersion() != VERSION)
@@ -290,8 +491,9 @@ public final class UUID {
     }
 
     /**
-     * extract timestamp from raw UUID bytes and return as int
-     * @return millisecond UTC timestamp from generation of the UUID, or null for unrecognized format
+     * Extract timestamp from raw UUID bytes and return as int. If the UUID is not the default type, then we can't parse
+     * the timestamp out and null is returned.
+     * @return Millisecond UTC timestamp from generation of the UUID, or null for unrecognized format.
      */
     public Date getTimestamp() {
         if (getVersion() != VERSION)
@@ -308,10 +510,9 @@ public final class UUID {
     }
 
     /**
-     * extract MAC address fragment from raw UUID bytes, setting missing values to 0,
-     * thus the first 2 and a half bytes will be 0, followed by 3 and a half bytes
-     * of the active MAC address when the UUID was generated
-     * @return byte array of UUID fragment, or null for unrecognized format
+     * Extract MAC address fragment from raw UUID bytes, setting missing values to 0, thus the first 2 and a half bytes
+     * will be 0, followed by 3 and a half bytes of the active MAC address when the UUID was generated.
+     * @return Byte array of UUID fragment, or null for unrecognized format.
      */
     public byte[] getMacFragment() {
         if (getVersion() != 'b')
@@ -329,10 +530,20 @@ public final class UUID {
         return x;
     }
 
+    /**
+     * Basic implementation of equals that checks if the given object is null or a different type, then compares the
+     * byte arrays which store the content of the UUID. I've considered making this compatible with the content of
+     * java.util.UUID, but not sure thats a good idea given that those are objects of a different type, and doing
+     * a deep comparison might be surprising functionality.
+     * @param o Object against which we compare this UUID.
+     * @return True or false if this UUID's content is identical to the given UUID.
+     */
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
         UUID that = (UUID) o;
 
@@ -346,18 +557,32 @@ public final class UUID {
         return true;
     }
 
+    /**
+     * The hash code implementation just calls Arrays.hashCode() on the contents of this UUID (stored as a byte array).
+     * @return The hash value of this object.
+     */
     @Override
     public int hashCode() {
         return Arrays.hashCode(content);
     }
 
+    /**
+     * Get the active MAC address on the current machine as a byte array. This is called when generating a new UUID.
+     * Note that a machine can have multiple or no active MAC addresses. This method works by iterating through the list
+     * of network interfaces, ignoring the loopback interface and any virtual interfaces (which often have made-up
+     * addresses), and returning the first one we find. If no valid addresses are found, then a byte array of the same
+     * length with all zeros is returned.
+     * @return 6-byte array for first active MAC address, or 6-byte zeroed array if no interfaces are active.
+     */
     private static byte[] macAddress() {
         try {
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
             byte[] mac = null;
+
             while (interfaces.hasMoreElements() && mac != null && mac.length != 6) {
                 NetworkInterface netInterface = interfaces.nextElement();
-                if (netInterface.isLoopback() || netInterface.isVirtual() ) { continue; }
+                if (netInterface.isLoopback() || netInterface.isVirtual())
+                    continue;
                 mac = netInterface.getHardwareAddress();
             }
 
@@ -371,7 +596,12 @@ public final class UUID {
         }
     }
 
-    // pulled from http://stackoverflow.com/questions/35842/how-can-a-java-program-get-its-own-process-id
+    /**
+     * Get the process id of this JVM. I haven't tested this extensively so its possible that this performs differently
+     * on esoteric JVMs. I copied this from:
+     * http://stackoverflow.com/questions/35842/how-can-a-java-program-get-its-own-process-id
+     * @return Id of the current JVM process.
+     */
     private static int processId() {
         // Note: may fail in some JVM implementations
         // something like '<pid>@<hostname>', at least in SUN / Oracle JVMs

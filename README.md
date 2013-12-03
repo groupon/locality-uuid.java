@@ -174,6 +174,8 @@ count up from 1970-1-1 0:00:00.000 UTC.
 API
 ---
 
+More information is available in the source code comments.
+
 __UUID()__
 
 Generate a new UUID object.
@@ -181,11 +183,27 @@ Generate a new UUID object.
 __UUID(String uuid)__
 
 Construct a UUID with the given String, must be of the form `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
-where `x` matches `[0-9a-f]`.
+where `x` matches `[0-9a-fA-F]`.
 
 __UUID(byte[] uuid)__
 
 Construct a UUID given its raw byte array contents.
+
+__UUID(java.util.UUID UUID)__
+
+Construct a locality UUID object given a java.util.UUID object.
+
+__UUID(long mostSignificantBits, long leastSignificantBits)__
+
+Construct a UUID given longs representing the most and least significant bits of a UUID.
+
+__static boolean isValidUUID(String id)__
+
+Check if a String is in the valid UUID format such that it can be parsed.
+
+__static boolean isValidUUID(char[] id)__
+
+Check if a character array is in the valid UUID format such that it can be parsed.
 
 __static void useSequentialIds()__
 
@@ -202,6 +220,18 @@ Get raw byte content of UUID.
 __String toString()__
 
 Get UUID String in the standard format.
+
+__java.util.UUID toJavaUUID()__
+
+Get this com.groupon.uuid.UUID object as a java.util.UUID object.
+
+__long getMostSignificantBits()__
+
+Get the first half of this UUID as a long value.
+
+__long getLeastSignificantBits()__
+
+Get the second half of this UUID as a long value.
 
 __char getVersion()__
 
