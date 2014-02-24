@@ -97,7 +97,7 @@ public class Example {
 Or get the jar and run from the command line:
 
 ```
-java -cp locality-uuid-1.2.0.jar com.groupon.uuid.GenerateUUID
+java -cp locality-uuid-1.1.0.jar com.groupon.uuid.GenerateUUID
 ```
 
 Notes
