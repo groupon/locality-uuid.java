@@ -67,7 +67,7 @@ If the jar is in one of your repositories, add this to your pom.xml:
 <dependency>
   <groupId>com.groupon</groupId>
   <artifactId>locality-uuid</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
 </dependency>
 ```
 
