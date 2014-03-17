@@ -33,13 +33,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package com.groupon.uuid;
 
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.NetworkInterface;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -48,8 +44,6 @@ import java.util.Set;
 
 import static org.junit.Assert.*;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({NetworkInterface.class})
 public class UUIDTest {
 
     /**
