@@ -67,7 +67,7 @@ If the jar is in one of your repositories, add this to your pom.xml:
 <dependency>
   <groupId>com.groupon</groupId>
   <artifactId>locality-uuid</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.1</version>
 </dependency>
 ```
 
@@ -97,7 +97,7 @@ public class Example {
 Or get the jar and run from the command line:
 
 ```
-java -cp locality-uuid-1.1.0.jar com.groupon.uuid.GenerateUUID
+java -cp locality-uuid-1.1.1.jar com.groupon.uuid.GenerateUUID
 ```
 
 Notes

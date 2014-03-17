@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+v1.1.1
+------
+
+- Fix bug in code to find MAC addresses. (136230954f05a647c0109b14d7f0d868d97e1b9c)
+
 v1.1.0
 ------
 
