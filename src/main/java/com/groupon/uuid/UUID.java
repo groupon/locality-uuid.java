@@ -579,7 +579,7 @@ public class UUID {
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
             byte[] mac = null;
 
-            while (interfaces.hasMoreElements() && mac != null && mac.length != 6) {
+            while (interfaces.hasMoreElements() && (mac == null || mac.length != 6)) {
                 NetworkInterface netInterface = interfaces.nextElement();
                 if (netInterface.isLoopback() || netInterface.isVirtual())
                     continue;
