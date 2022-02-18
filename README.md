@@ -19,7 +19,7 @@ Solutions:
 
 - We have tested thoroughly in a concurrent environment and include both the PID and MAC Address 
     in the UUID. In the first block of the UUID we have a counter which we increment with a large
-    primary number, ensuring that the counter in a single process takes a long time to wrap around
+    prime number, ensuring that the counter in a single process takes a long time to wrap around
     to the same value.
 - The UUID layout is very simple and documented below. Retrieving the millisecond-precision timestamp
     is as simple as copying the last segment and converting from hex to decimal.
